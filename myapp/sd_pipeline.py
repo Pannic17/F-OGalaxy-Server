@@ -234,7 +234,7 @@ class StableDiffusionGenerate:
         cv2.imwrite(path_image.format(int(time.time())), image_float)
         self.hdri_path = path_image
         alpha = cv2.convertScaleAbs(image, alpha=contrast)
-        alpha = cv2.subtract(alpha, brightness)
+        alpha = cv2.subtract(alpha, (brightness, brightness, brightness))
         alpha = cv2.cvtColor(alpha, cv2.COLOR_BGR2GRAY)
         alpha = cv2.convertScaleAbs(alpha, alpha=0.5)
         # alpha = cv2.convetTo(alpha, -1, 0.5, 0)

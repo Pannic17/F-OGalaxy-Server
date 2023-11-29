@@ -32,11 +32,11 @@ def run_pipeline(num):
         print("INIT")
 
         # TEST
-        image = cv2.imread("myapp/test/ngc7635.jpg")
+        image = cv2.imread("myapp/test/img.png")
         # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         print("READ IMAGE")
         pipeline.photo = image
-        w, h, c = image.shape
+        h, w, c = image.shape
         points = [(0, 0), (w - 1, 0), (w - 1, h - 1), (0, h - 1)]
         print("SET POINTS")
 
