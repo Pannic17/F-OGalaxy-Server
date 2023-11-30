@@ -26,15 +26,20 @@ def my_async_task():
 @shared_task
 def run_pipeline(num):
     try:
+        start_time = time.time()
         print(BASE_DIR)
         print("START")
         pipeline = StableDiffusionGenerate.from_default()
         print("INIT")
 
         # TEST
-        image = cv2.imread("myapp/test/img.png")
+        # image = cv2.imread("myapp/test/ngc6960.jpg")
         # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        print("READ IMAGE")
+        # print("READ IMAGE")
+        raw = pipeline.take_photo()
+        # pipeline.photo = image
+        image = cv2.imread(raw)
+        # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         pipeline.photo = image
         h, w, c = image.shape
         points = [(0, 0), (w - 1, 0), (w - 1, h - 1), (0, h - 1)]
@@ -67,6 +72,8 @@ def run_pipeline(num):
         colors = pipeline.cv_cluster_colors(5)
         pipeline.set_status(999, ">finish")
         print(pipeline.message)
+
+        print("Time Elapsed：{}s".format(time.time() - start_time))
 
         print("任务完成")
         return {
