@@ -171,10 +171,10 @@ class StableDiffusionGenerate:
         CONTROLNET_PATH = "lllyasviel/sd-controlnet-canny"
         DIFFUSER_PATH = "runwayml/stable-diffusion-v1-5"
         INPAINT_PATH = "runwayml/stable-diffusion-inpainting"
-        LORA_WEIGHTS = "400shijing.safetensors"
+        LORA_WEIGHTS = "OGX.safetensors"
         ESRGAN_WEIGHTS = "RealESRGAN_x4plus.pth"
-        PROMPT_GENERATE = ("A galaxy contains stars and planets, including cyan netron stars, black holes far away. "
-                           "animated, hdr, cinematic, illustration")
+        PROMPT_GENERATE = ("OyGalaxy A galaxy contains stars and planets, including cyan neutron stars, black holes "
+                           "far away. animated, hdr, cinematic, illustration")
         PROMPT_INPAINT = "universe, hdr, nebula, vignette, black on the edge, dark, space, galaxy, stars"
         SAVE_HDR_PATH = "images/hdr/sd_hdr"
         return cls(CONTROLNET_PATH,
@@ -215,7 +215,9 @@ class StableDiffusionGenerate:
 
     def inpaint(self):
         image, mask = self.cv_process4inpaint(self.generated_path)
-        path = save_image(self.sd_inpaint(image, mask, self.prompt_inpaint), self.save_inpaint_prefix)
+        # path = save_image(self.sd_inpaint(image, mask, self.prompt_inpaint), self.save_inpaint_prefix)
+        self.sd_inpaint(image, mask, self.prompt_inpaint)
+        path = save_image(self.cv_mask_gradient(), self.save_inpaint_prefix)
         self.inpainted_path = path
         return path
 
@@ -254,7 +256,7 @@ class StableDiffusionGenerate:
                                                                  controlnet=controlnet,
                                                                  torch_dtype=torch.float16,
                                                                  use_safetensors=True).to("cuda")
-        # pipe.load_lora_weights('./models', weight_name=self.lora_weights)
+        pipe.load_lora_weights('./models', weight_name=self.lora_weights)
         pipe.scheduler = UniPCMultistepScheduler.from_config(pipe.scheduler.config)
         pipe.enable_model_cpu_offload()
         output = pipe(prompt, image=image).images[0]
@@ -266,6 +268,7 @@ class StableDiffusionGenerate:
         pipe = StableDiffusionInpaintPipeline.from_pretrained(self.inpaint_path,
                                                               torch_dtype=torch.float16).to("cuda")
         output = pipe(prompt=prompt, image=image, mask_image=mask, width=self.width, height=self.height).images[0]
+        # pipe.load_lora_weights('./models', weight_name=self.lora_weights)
         self.inpainted = output
         # save_image(output, self.save_inpaint_prefix)
         return output
@@ -348,22 +351,43 @@ class StableDiffusionGenerate:
         image = self.photo
         # Convert the image to grayscale and apply adaptive thresholding.
         gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-        threshold = cv2.adaptiveThreshold(gray, 255,
-                                          cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 11, 2)
+        canny = cv2.Canny(gray, 10, 50)
+        # threshold = cv2.adaptiveThreshold(gray, 255,
+        #                                   cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 11, 2)
         # Depending on 'white' parameter, locate white or non-white regions.
         if white:
-            search = np.where(threshold == 255)
+            search = np.where(canny == 255)
             search = np.column_stack((search[1], search[0])).astype(np.float32)
         else:
-            search = np.where(threshold != 255)
+            search = np.where(canny != 255)
             search = np.column_stack((search[1], search[0])).astype(np.float32)
         # Perform k-means clustering to calculate cluster centers.
         criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.2)
         _, labels, centers = cv2.kmeans(search, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
-        centers = np.uint8(centers)
+        # centers = np.uint8(centers)
         self.planet_locations = centers
+        cv2.imwrite("images/center/centers.png", canny)
         return centers.tolist()
+
+    def cv_mask_gradient(self):
+        mask = cv2.imread("myapp/test/gradient.png")
+        # original = image
+        inpainted = self.inpainted
+        original = np.array(inpainted)
+        original = cv2.cvtColor(original, cv2.COLOR_RGB2BGR)
+        # original = self.inpainted
+        mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
+        mask = mask.astype(float) / 255.0
+        # mask the image
+        for c in range(0, 3):
+            original[:, :, c] = original[:, :, c] * mask
+
+        original = cv2.cvtColor(original, cv2.COLOR_BGR2RGB)
+        original = Image.fromarray(original)
+        self.inpainted = original
+        return original
 
     def set_status(self, status, description):
         self.status = status
         self.message = description
+

@@ -42,10 +42,11 @@ def run_pipeline(num):
         # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         pipeline.photo = image
         h, w, c = image.shape
+        points_1130 = [(234, 84), (437, 110), (406, 321), (202, 286)]
         points = [(0, 0), (w - 1, 0), (w - 1, h - 1), (0, h - 1)]
         print("SET POINTS")
 
-        pipeline.cv_process_photo(points)
+        pipeline.cv_process_photo(points_1130)
         pipeline.set_status(901, "process photo<>calculate centers")
         print(pipeline.message)
 
